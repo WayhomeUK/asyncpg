@@ -1936,6 +1936,10 @@ async def connect(dsn=None, *,
         The default is ``'prefer'``: try an SSL connection and fallback to
         non-SSL connection if that fails.
 
+        SSL may also be a callable that returns one of the above values.
+        If a callable is provided, it will be called each time a new connection
+        is established.
+
         .. note::
 
            *ssl* is ignored for Unix domain socket communication.
