@@ -1374,6 +1374,48 @@ class TestSSLConnection(BaseTestSSLConnection):
         finally:
             await con.close()
 
+    async def test_ssl_connection_custom_context_callable(self):
+        def get_context():
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_context.load_verify_locations(SSL_CA_CERT_FILE)
+            return ssl_context
+
+        con = await self.connect(
+            host='localhost',
+            user='ssl_user',
+            ssl=get_context)
+
+        try:
+            self.assertEqual(await con.fetchval('SELECT 42'), 42)
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await con.execute('SELECT pg_sleep(5)', timeout=0.5)
+
+            self.assertEqual(await con.fetchval('SELECT 43'), 43)
+        finally:
+            await con.close()
+
+    async def test_ssl_connection_custom_context_callable_coroutine(self):
+        async def get_context():
+            ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ssl_context.load_verify_locations(SSL_CA_CERT_FILE)
+            return ssl_context
+
+        con = await self.connect(
+            host='localhost',
+            user='ssl_user',
+            ssl=get_context)
+
+        try:
+            self.assertEqual(await con.fetchval('SELECT 42'), 42)
+
+            with self.assertRaises(asyncio.TimeoutError):
+                await con.execute('SELECT pg_sleep(5)', timeout=0.5)
+
+            self.assertEqual(await con.fetchval('SELECT 43'), 43)
+        finally:
+            await con.close()
+
     async def test_ssl_connection_sslmode(self):
         async def verify_works(sslmode, *, host='localhost'):
             con = None

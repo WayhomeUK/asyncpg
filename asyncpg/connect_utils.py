@@ -695,6 +695,10 @@ class TLSUpgradeProto(asyncio.Protocol):
 
 async def _create_ssl_connection(protocol_factory, host, port, *,
                                  loop, ssl_context, ssl_is_advisory=False):
+    if callable(ssl_context):
+        ssl_context = ssl_context()
+        if inspect.isawaitable(ssl_context):
+            ssl_context = await ssl_context
 
     tr, pr = await loop.create_connection(
         lambda: TLSUpgradeProto(loop, host, port,
