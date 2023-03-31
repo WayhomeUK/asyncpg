@@ -695,11 +695,6 @@ class TLSUpgradeProto(asyncio.Protocol):
 
 async def _create_ssl_connection(protocol_factory, host, port, *,
                                  loop, ssl_context, ssl_is_advisory=False):
-    if callable(ssl_context):
-        ssl_context = ssl_context()
-        if inspect.isawaitable(ssl_context):
-            ssl_context = await ssl_context
-
     tr, pr = await loop.create_connection(
         lambda: TLSUpgradeProto(loop, host, port,
                                 ssl_context, ssl_is_advisory),
@@ -774,6 +769,14 @@ async def _connect_addr(
             password = await password
 
         params = params._replace(password=password)
+
+    if callable(params.ssl):
+        ssl = params.ssl()
+        if inspect.isawaitable(ssl):
+            ssl = await ssl
+
+        params = params._replace(ssl=ssl)
+
     args = (addr, loop, config, connection_class, record_class, params_input)
 
     # prepare the params (which attempt has ssl) for the 2 attempts
@@ -828,8 +831,9 @@ async def __connect_addr(
     elif params.ssl and params.direct_tls:
         # if ssl and direct_tls are given, skip STARTTLS and perform direct
         # SSL connection
+        ssl_context = params.ssl
         connector = loop.create_connection(
-            proto_factory, *addr, ssl=params.ssl
+            proto_factory, *addr, ssl=ssl_context
         )
 
     elif params.ssl:
@@ -916,6 +920,12 @@ async def _connect(*, loop, timeout, connection_class, record_class, **kwargs):
 
 async def _cancel(*, loop, addr, params: _ConnectionParameters,
                   backend_pid, backend_secret):
+    if callable(params.ssl):
+        ssl = params.ssl()
+        if inspect.isawaitable(ssl):
+            ssl = await ssl
+
+        params = params._replace(ssl=ssl)
 
     class CancelProto(asyncio.Protocol):
 
